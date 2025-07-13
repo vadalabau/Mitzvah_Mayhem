@@ -1,25 +1,11 @@
 """
 Juego de Cartas - Sistema de Torneo con Arquitectura de 3 Capas
-===============================================================
 
-Este archivo inicializa y configura el sistema completo del juego de cartas
-con todas las mejoras implementadas:
-
-✅ Arquitectura de 3 Capas (Database, Data Access, Business Logic)
-✅ Sistema de Torneo con 5 jugadores
-✅ Concurrencia con 3 procesos y 5 hilos
-✅ Patrón Repository para acceso a datos
-✅ Patrón Singleton para conexión a BD
-✅ Manejo de transacciones y errores
-✅ Sistema de estadísticas completo
-✅ Mazos dinámicos y balanceados
 """
-
 import sqlite3
 import random
 from typing import List, Tuple, Dict
 from contextlib import contextmanager
-
 
 class DatabaseInitializer:
     """Clase para inicializar y configurar la base de datos del juego"""
@@ -407,7 +393,6 @@ class DatabaseInitializer:
             print(f"❌ Error durante la inicialización: {e}")
             raise
 
-
 def main():
     """Función principal para inicializar el sistema"""
     try:
@@ -418,7 +403,6 @@ def main():
         return 1
     
     return 0
-
 
 if __name__ == "__main__":
     exit(main())

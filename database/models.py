@@ -19,16 +19,9 @@ MODELOS DEFINIDOS:
 4. ResultadoPartida - Representa el resultado de una partida
 """
 
-# =============================================================================
-# IMPORTS - Importaciones necesarias para los modelos
-# =============================================================================
 from dataclasses import dataclass
 from typing import List, Optional
 
-
-# =============================================================================
-# MODELO CARTA - Representa una carta del juego
-# =============================================================================
 @dataclass
 class Carta:
     """
@@ -60,10 +53,6 @@ class Carta:
         """
         return f"{self.nombre} ({self.tipo}, {self.poder})"
 
-
-# =============================================================================
-# MODELO JUGADOR - Representa un jugador del torneo
-# =============================================================================
 @dataclass
 class Jugador:
     """
@@ -95,10 +84,6 @@ class Jugador:
         """
         return f"{self.nombre} (V: {self.victorias}, D: {self.derrotas})"
 
-
-# =============================================================================
-# MODELO MAZO - Representa el conjunto de cartas de un jugador
-# =============================================================================
 @dataclass
 class Mazo:
     """
@@ -174,10 +159,6 @@ class Mazo:
         """
         self.cartas.append(carta)
 
-
-# =============================================================================
-# MODELO RESULTADO PARTIDA - Representa el resultado de una partida
-# =============================================================================
 @dataclass
 class ResultadoPartida:
     """

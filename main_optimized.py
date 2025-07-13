@@ -18,15 +18,15 @@ CONCEPTOS DE CONCURRENCIA:
 CARACTERÍSTICAS:
 - Separación clara de responsabilidades
 - Patrón Repository para acceso a datos
-- Patrón Singleton para conexión a BD
 - Lógica de negocio centralizada
 - Mejor manejo de errores y transacciones
 - Conceptos básicos de hilos y procesos
 """
-
+    
 # =============================================================================
 # IMPORTS - Importaciones necesarias para el funcionamiento
 # =============================================================================
+import multiprocessing
 from data_access.database_connection import DatabaseConnection
 from business_logic.game_engine import GameEngine
 from database.models import Jugador
@@ -117,11 +117,6 @@ def jugar_partida(engine: GameEngine):
     nombres_jugadores = ["Jugador 1", "Jugador 2", "Jugador 3", "Jugador 4", "Jugador 5"]
     
     try:
-        # Limpiar estadísticas antes de iniciar la partida
-        print("\n🧹 Reiniciando estadísticas de todos los jugadores...")
-        engine.limpiar_estadisticas()
-        print("✅ Estadísticas reiniciadas exitosamente")
-
         # Informar inicio de la partida
         print(f"\n🎯 Iniciando partida entre {len(nombres_jugadores)} jugadores...")
         print(f"👥 Jugadores: {', '.join(nombres_jugadores)}")
@@ -278,10 +273,5 @@ def main():
     except:
         pass
 
-
-# =============================================================================
-# PUNTO DE ENTRADA - Solo se ejecuta si este archivo se ejecuta directamente
-# =============================================================================
 if __name__ == "__main__":
-    # Ejecutar la función principal
     main() 

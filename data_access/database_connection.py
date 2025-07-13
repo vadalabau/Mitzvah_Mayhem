@@ -1,23 +1,4 @@
 """
-Clase de conexión a la base de datos
-====================================
-
-Este archivo implementa el patrón Singleton para manejar la conexión a la base de datos
-SQLite de forma segura y eficiente.
-
-PATRÓN SINGLETON:
-- Garantiza que solo exista una instancia de conexión a la BD
-- Evita múltiples conexiones innecesarias
-- Centraliza la gestión de la conexión
-- Facilita el manejo de transacciones
-
-CARACTERÍSTICAS:
-- Conexión automática cuando se necesita
-- Context manager para manejo seguro de cursores
-- Transacciones automáticas con commit/rollback
-- Inicialización de tablas y datos
-- Cierre seguro de conexiones
-
 USO:
     # Crear conexión (Singleton)
     db = DatabaseConnection()

@@ -24,9 +24,6 @@ CARACTERÍSTICAS:
 - Transacciones seguras
 """
 
-# =============================================================================
-# IMPORTS - Importaciones necesarias para los repositorios
-# =============================================================================
 from typing import List, Optional
 from database.models import Carta, Jugador, Mazo
 from data_access.database_connection import DatabaseConnection
