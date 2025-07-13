@@ -233,239 +233,7 @@ class ProcesoArbitro(multiprocessing.Process):
         return [jugador['nombre'] for jugador in jugadores_con_poder]
 
 
-class ProcesoBaseDatos(multiprocessing.Process):
-    """Proceso que maneja las operaciones de base de datos"""
-    
-    def __init__(self, operaciones_queue: multiprocessing.Queue, resultados_queue: multiprocessing.Queue):
-        super().__init__()
-        self.operaciones_queue = operaciones_queue
-        self.resultados_queue = resultados_queue
-        
-    def run(self):
-        """Ejecuta el proceso de base de datos"""
-        print(f"🗄️ Proceso base de datos iniciado (PID: {self.pid})")
-        
-        # Inicializar conexión a BD
-        from data_access.database_connection import DatabaseConnection
-        db = DatabaseConnection()
-        
-        while True:
-            try:
-                # Esperar operación de BD
-                operacion = self.operaciones_queue.get(timeout=30.0)
-                
-                if operacion['tipo'] == 'actualizar_estadisticas':
-                    # Actualizar estadísticas de jugador
-                    from data_access.repositories import JugadorRepository
-                    repo = JugadorRepository()
-                    repo.actualizar_estadisticas(operacion['jugador_id'], operacion['victoria'])
-                    print(f"🗄️ Estadísticas actualizadas para jugador {operacion['jugador_id']}")
-                    
-                elif operacion['tipo'] == 'obtener_estadisticas':
-                    # Obtener estadísticas
-                    from data_access.repositories import JugadorRepository
-                    repo = JugadorRepository()
-                    estadisticas = repo.obtener_todos()
-                    self.resultados_queue.put({'tipo': 'estadisticas', 'datos': estadisticas})
-                    
-                elif operacion['tipo'] == 'terminar':
-                    print(f"🗄️ Proceso base de datos terminando (PID: {self.pid})")
-                    break
-                    
-            except Exception as e:
-                print(f"🗄️ Error en proceso BD: {e}")
-                break
-        
-        print(f"🗄️ Proceso base de datos terminado (PID: {self.pid})")
 
-
-class ProcesoJugadores(multiprocessing.Process):
-    """Proceso que maneja la lógica de los jugadores"""
-    
-    def __init__(self, jugadores_data: List[Dict], acciones_queue: multiprocessing.Queue, resultados_queue: multiprocessing.Queue):
-        super().__init__()
-        self.jugadores_data = jugadores_data
-        self.acciones_queue = acciones_queue
-        self.resultados_queue = resultados_queue
-        
-    def run(self):
-        """Ejecuta el proceso de jugadores"""
-        print(f"🎮 Proceso jugadores iniciado (PID: {self.pid})")
-        
-        # Crear hilos para cada jugador
-        jugadores_threads = []
-        nombres = ["Jugador 1", "Jugador 2", "Jugador 3", "Jugador 4", "Jugador 5"]
-        
-        for i in range(5):
-            jugador_thread = JugadorThread(
-                nombre=nombres[i],
-                mazo=self.jugadores_data[i]['mazo'],
-                turno_event=threading.Event(),
-                resultado_queue=queue.Queue(),
-                lock_compartido=threading.Lock(),
-                jugador_id=i
-            )
-            jugadores_threads.append(jugador_thread)
-        
-        # Iniciar hilos
-        for jugador_thread in jugadores_threads:
-            jugador_thread.start()
-        
-        # Esperar acciones del árbitro
-        while True:
-            try:
-                accion = self.acciones_queue.get(timeout=30.0)
-                
-                if accion['tipo'] == 'jugar_carta':
-                    # Simular jugada de carta
-                    jugador_id = accion['jugador_id']
-                    if jugador_id < len(jugadores_threads):
-                        carta = jugadores_threads[jugador_id].jugar_carta()
-                        self.resultados_queue.put({
-                            'tipo': 'carta_jugada',
-                            'jugador_id': jugador_id,
-                            'carta': carta
-                        })
-                
-                elif accion['tipo'] == 'terminar':
-                    # Terminar hilos
-                    for jugador_thread in jugadores_threads:
-                        jugador_thread.terminar()
-                        jugador_thread.join()
-                    break
-                
-            except Exception as e:
-                print(f"🎮 Error en proceso jugadores: {e}")
-                break
-        
-        print(f"🎮 Proceso jugadores terminado (PID: {self.pid})")
-    
-    def _ejecutar_partida_5_jugadores(self, jugadores_threads: List[JugadorThread], 
-                                    resultado_queue: queue.Queue, 
-                                    turno_events: List[threading.Event]) -> Dict:
-        """Ejecuta la partida con 5 jugadores - 3 rondas"""
-        cartas_jugadas = []
-        ronda = 1
-        rondas_maximas = 3
-        
-        print(f"🎯 Partida de {rondas_maximas} rondas con 5 jugadores")
-        
-        while ronda <= rondas_maximas and len([j for j in jugadores_threads if j.activo and not j.mazo.esta_vacio()]) > 1:
-            print(f"\n🔄 Ronda {ronda} de {rondas_maximas}")
-            
-            jugadores_activos = [j for j in jugadores_threads if j.activo and not j.mazo.esta_vacio()]
-            
-            if not jugadores_activos:
-                print("⚠️ No hay jugadores activos")
-                break
-            
-            # Recolectar cartas jugadas en esta ronda
-            cartas_ronda = []
-            
-            for i, jugador_thread in enumerate(jugadores_activos):
-                try:
-                    # Activar turno del jugador
-                    print(f"🎯 Turno de {jugador_thread.nombre}")
-                    turno_events[jugador_thread.jugador_id].set()
-                    
-                    # Esperar carta con timeout
-                    nombre, carta, jugador_id = resultado_queue.get(timeout=10.0)
-                    cartas_ronda.append((nombre, carta))
-                    
-                except queue.Empty:
-                    print("⚠️ Timeout esperando carta de jugador")
-                    break
-            
-            # Determinar ganador de la ronda
-            if cartas_ronda:
-                ganador_ronda = self._determinar_ganador_ronda(cartas_ronda)
-                cartas_jugadas.extend(cartas_ronda)
-                print(f"  🏆 Ganador de la ronda: {ganador_ronda}")
-                
-                # Mostrar cartas restantes
-                for jugador_thread in jugadores_threads:
-                    if jugador_thread.activo:
-                        cartas_restantes = len(jugador_thread.mazo.cartas)
-                        print(f"  📊 {jugador_thread.nombre}: {cartas_restantes} cartas restantes")
-            
-            ronda += 1
-            time.sleep(1)  # Pausa para visualización
-        
-        print(f"\n🏁 Partida terminada después de {ronda-1} rondas")
-        
-        # Determinar ranking final de todos los jugadores
-        ranking_jugadores = self._determinar_ranking_final(jugadores_threads)
-        
-        ganador = ranking_jugadores[0]  # Primer lugar
-        perdedor = ranking_jugadores[-1]  # Último lugar
-        
-        print(f"🏆 Ganador: {ganador}")
-        print(f"🥈 Segundo: {ranking_jugadores[1] if len(ranking_jugadores) > 1 else 'N/A'}")
-        print(f"🥉 Tercero: {ranking_jugadores[2] if len(ranking_jugadores) > 2 else 'N/A'}")
-        print(f"📊 Cuarto: {ranking_jugadores[3] if len(ranking_jugadores) > 3 else 'N/A'}")
-        print(f"💀 Último: {perdedor}")
-        
-        return {
-            'ganador': ganador,
-            'perdedor': perdedor,
-            'ranking_completo': ranking_jugadores,
-            'cartas_jugadas': cartas_jugadas,
-            'rondas_jugadas': ronda - 1
-        }
-    
-    def _determinar_ganador_ronda(self, cartas_ronda: List[tuple]) -> str:
-        """Determina el ganador de una ronda basado en el poder de las cartas"""
-        if not cartas_ronda:
-            return ""
-        cartas_validas = [(nombre, carta) for nombre, carta in cartas_ronda if carta is not None]
-        if not cartas_validas:
-            return ""
-        max_poder = max(carta.poder for _, carta in cartas_validas)
-        ganadores = [nombre for nombre, carta in cartas_validas if carta.poder == max_poder]
-        return random.choice(ganadores)
-    
-    def _determinar_ganador_por_poder_total(self, jugadores: List[JugadorThread]) -> str:
-        """Determina el ganador basado en el poder total de cartas restantes"""
-        poderes = {}
-        for jugador in jugadores:
-            if jugador.mazo.cartas:
-                poder_total = sum(carta.poder for carta in jugador.mazo.cartas)
-                poderes[jugador.nombre] = poder_total
-                print(f"  📊 {jugador.nombre}: poder total = {poder_total}")
-        
-        if not poderes:
-            return ""
-        
-        max_poder = max(poderes.values())
-        ganadores = [nombre for nombre, poder in poderes.items() if poder == max_poder]
-        return random.choice(ganadores)
-    
-    def _determinar_ranking_final(self, jugadores_threads: List[JugadorThread]) -> List[str]:
-        """Determina el ranking final de todos los jugadores basado en cartas restantes y poder"""
-        jugadores_con_poder = []
-        
-        for jugador in jugadores_threads:
-            cartas_restantes = len(jugador.mazo.cartas) if jugador.mazo.cartas else 0
-            poder_total = sum(carta.poder for carta in jugador.mazo.cartas) if jugador.mazo.cartas else 0
-            
-            jugadores_con_poder.append({
-                'nombre': jugador.nombre,
-                'cartas_restantes': cartas_restantes,
-                'poder_total': poder_total,
-                'puntuacion': cartas_restantes * 10 + poder_total  # Priorizar cartas restantes
-            })
-        
-        # Ordenar por puntuación (mayor a menor)
-        jugadores_con_poder.sort(key=lambda x: x['puntuacion'], reverse=True)
-        
-        # Mostrar ranking detallado
-        print("\n📊 RANKING FINAL:")
-        for i, jugador in enumerate(jugadores_con_poder):
-            posicion = i + 1
-            emoji = "🏆" if posicion == 1 else "🥈" if posicion == 2 else "🥉" if posicion == 3 else "📊" if posicion == 4 else "💀"
-            print(f"  {emoji} {posicion}º: {jugador['nombre']} - {jugador['cartas_restantes']} cartas, {jugador['poder_total']} poder")
-        
-        return [jugador['nombre'] for jugador in jugadores_con_poder]
 
 
 class GameEngine:
@@ -492,10 +260,6 @@ class GameEngine:
         
         # Crear colas para comunicación entre procesos
         resultado_queue = multiprocessing.Queue()
-        operaciones_bd_queue = multiprocessing.Queue()
-        resultados_bd_queue = multiprocessing.Queue()
-        acciones_jugadores_queue = multiprocessing.Queue()
-        resultados_jugadores_queue = multiprocessing.Queue()
         
         # Preparar datos para los procesos
         jugadores_data = [
@@ -503,26 +267,17 @@ class GameEngine:
             for nombre, mazo in jugadores_mazos.items()
         ]
         
-        # Crear y ejecutar los 3 procesos
-        proceso_bd = ProcesoBaseDatos(operaciones_bd_queue, resultados_bd_queue)
-        proceso_jugadores = ProcesoJugadores(jugadores_data, acciones_jugadores_queue, resultados_jugadores_queue)
+        # Crear y ejecutar el proceso árbitro
         proceso_arbitro = ProcesoArbitro(jugadores_data, resultado_queue)
         
-        # Iniciar procesos
-        proceso_bd.start()
-        proceso_jugadores.start()
+        # Iniciar proceso
         proceso_arbitro.start()
         
         # Esperar resultado del proceso árbitro
         resultado_dict = resultado_queue.get()
         
-        # Terminar procesos
-        operaciones_bd_queue.put({'tipo': 'terminar'})
-        acciones_jugadores_queue.put({'tipo': 'terminar'})
-        
+        # Terminar proceso
         proceso_arbitro.join()
-        proceso_jugadores.join()
-        proceso_bd.join()
         
         # Convertir resultado a formato esperado
         resultado = ResultadoPartida(
@@ -531,8 +286,8 @@ class GameEngine:
             cartas_jugadas=resultado_dict['cartas_jugadas']
         )
         
-        # Actualizar estadísticas usando el proceso de BD
-        self._actualizar_estadisticas_con_proceso_bd(resultado_dict['ranking_completo'], operaciones_bd_queue)
+        # Actualizar estadísticas directamente usando repositorios
+        self._actualizar_estadisticas_ranking(resultado_dict['ranking_completo'])
         
         return resultado
     
@@ -598,31 +353,7 @@ class GameEngine:
         
         print("✅ Estadísticas actualizadas correctamente")
     
-    def _actualizar_estadisticas_con_proceso_bd(self, ranking_completo: List[str], operaciones_bd_queue: multiprocessing.Queue):
-        """Actualiza las estadísticas usando el proceso de base de datos"""
-        print(f"\n📊 Actualizando estadísticas para {len(ranking_completo)} jugadores...")
-        
-        for i, nombre_jugador in enumerate(ranking_completo):
-            jugador = self.jugador_repo.obtener_por_nombre(nombre_jugador)
-            if jugador and jugador.id is not None:
-                # Solo el primer lugar gana, los demás pierden
-                es_victoria = (i == 0)
-                
-                # Enviar operación al proceso de BD
-                operaciones_bd_queue.put({
-                    'tipo': 'actualizar_estadisticas',
-                    'jugador_id': jugador.id,
-                    'victoria': es_victoria
-                })
-                
-                if es_victoria:
-                    print(f"🏆 Victoria registrada para {nombre_jugador} (1º lugar)")
-                else:
-                    print(f"💀 Derrota registrada para {nombre_jugador} ({i+1}º lugar)")
-            else:
-                print(f"⚠️ No se encontró jugador: {nombre_jugador}")
-        
-        print("✅ Estadísticas actualizadas correctamente")
+
     
     def obtener_estadisticas(self) -> List[Jugador]:
         """Obtiene las estadísticas de todos los jugadores"""

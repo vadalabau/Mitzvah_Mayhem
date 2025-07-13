@@ -10,7 +10,7 @@ ARQUITECTURA IMPLEMENTADA:
 - Capa de Lógica de Negocio (business_logic/): Motor del juego
 
 CONCEPTOS DE CONCURRENCIA:
-- 3 procesos: Principal, Árbitro, Base de Datos
+- 1 proceso: Árbitro (coordinador de la partida)
 - 5 hilos: Uno por cada jugador
 - Sincronización con threading.Events
 - Comunicación segura con Queue
@@ -104,7 +104,7 @@ def jugar_partida(engine: GameEngine):
     Ejecuta una partida completa del torneo con 5 jugadores.
     
     Esta función:
-    1. Inicia el sistema de concurrencia (3 procesos + 5 hilos)
+    1. Inicia el sistema de concurrencia (1 proceso + 5 hilos)
     2. Coordina la partida de 3 rondas
     3. Determina el ranking final
     4. Actualiza estadísticas en la base de datos
