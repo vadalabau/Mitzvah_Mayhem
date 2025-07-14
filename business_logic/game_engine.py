@@ -232,10 +232,6 @@ class ProcesoArbitro(multiprocessing.Process):
         
         return [jugador['nombre'] for jugador in jugadores_con_poder]
 
-
-
-
-
 class GameEngine:
     """Motor principal del juego que coordina las partidas usando procesos e hilos"""
     
@@ -380,6 +376,39 @@ class GameEngine:
     def limpiar_estadisticas(self):
         """Limpia todas las estadísticas de victorias y derrotas"""
         self.jugador_repo.limpiar_estadisticas()
+
+
+class ProcesoReiniciarMazos(multiprocessing.Process):
+    """Proceso que reinicia los mazos de los jugadores"""
+    def __init__(self, nombres_jugadores: List[str], resultado_queue: Optional[multiprocessing.Queue] = None):
+        super().__init__()
+        self.nombres_jugadores = nombres_jugadores
+        self.resultado_queue = resultado_queue
+
+    def run(self):
+        print(f"🔄 Proceso de reinicio de mazos iniciado (PID: {self.pid})")
+        from business_logic.game_engine import GameEngine
+        engine = GameEngine()
+        engine.reiniciar_mazos(self.nombres_jugadores)
+        print(f"✅ Mazos reiniciados correctamente (PID: {self.pid})")
+        if self.resultado_queue:
+            self.resultado_queue.put("mazos_ok")
+
+
+class ProcesoLimpiarEstadisticas(multiprocessing.Process):
+    """Proceso que limpia las estadísticas de los jugadores"""
+    def __init__(self, resultado_queue: Optional[multiprocessing.Queue] = None):
+        super().__init__()
+        self.resultado_queue = resultado_queue
+
+    def run(self):
+        from data_access.repositories import JugadorRepository
+        print(f"🧹 Proceso de limpieza de estadísticas iniciado (PID: {self.pid})")
+        repo = JugadorRepository()
+        repo.limpiar_estadisticas()
+        print(f"✅ Estadísticas limpiadas correctamente (PID: {self.pid})")
+        if self.resultado_queue:
+            self.resultado_queue.put("limpieza_ok")
 
 
 class JugadorConMazo:

@@ -28,7 +28,7 @@ CARACTERÍSTICAS:
 # =============================================================================
 import multiprocessing
 from data_access.database_connection import DatabaseConnection
-from business_logic.game_engine import GameEngine
+from business_logic.game_engine import GameEngine, ProcesoReiniciarMazos, ProcesoLimpiarEstadisticas
 from database.models import Jugador
 
 
@@ -144,45 +144,41 @@ def jugar_partida(engine: GameEngine):
 
 def reiniciar_mazos(engine: GameEngine):
     """
-    Reinicia los mazos de todos los jugadores con nuevas cartas aleatorias.
-    
-    Esta función:
-    1. Limpia los mazos actuales de todos los jugadores
-    2. Asigna 4 cartas aleatorias a cada jugador
-    3. Garantiza que los mazos estén balanceados
-    
-    Args:
-        engine: Instancia del motor del juego
+    Reinicia los mazos de todos los jugadores con nuevas cartas aleatorias usando un proceso separado.
     """
-    # Lista de jugadores cuyos mazos serán reiniciados
+    import multiprocessing
     nombres_jugadores = ["Jugador 1", "Jugador 2", "Jugador 3", "Jugador 4", "Jugador 5"]
-    
     try:
-        print("\n🔄 Reiniciando mazos...")
-        # Llamar al método del motor para reiniciar mazos
-        engine.reiniciar_mazos(nombres_jugadores)
-        print("✅ Mazos reiniciados exitosamente")
+        print("\n🔄 Reiniciando mazos (en proceso separado)...")
+        resultado_queue = multiprocessing.Queue()
+        proceso = ProcesoReiniciarMazos(nombres_jugadores=nombres_jugadores, resultado_queue=resultado_queue)
+        proceso.start()
+        resultado = resultado_queue.get()  # Esperar confirmación
+        proceso.join()
+        if resultado == "mazos_ok":
+            print("✅ Mazos reiniciados exitosamente (proceso)")
+        else:
+            print("⚠️ Proceso finalizado pero sin confirmación de reinicio")
     except Exception as e:
         print(f"❌ Error al reiniciar mazos: {e}")
 
 
 def limpiar_estadisticas(engine: GameEngine):
     """
-    Limpia todas las estadísticas de victorias y derrotas de todos los jugadores.
-    
-    Esta función resetea:
-    - Contador de victorias a 0
-    - Contador de derrotas a 0
-    - Mantiene los jugadores registrados
-    
-    Args:
-        engine: Instancia del motor del juego
+    Limpia todas las estadísticas de victorias y derrotas de todos los jugadores usando un proceso separado.
     """
+    import multiprocessing
     try:
-        print("\n🧹 Limpiando estadísticas...")
-        # Llamar al método del motor para limpiar estadísticas
-        engine.limpiar_estadisticas()
-        print("✅ Estadísticas limpiadas exitosamente")
+        print("\n🧹 Limpiando estadísticas (en proceso separado)...")
+        resultado_queue = multiprocessing.Queue()
+        proceso = ProcesoLimpiarEstadisticas(resultado_queue=resultado_queue)
+        proceso.start()
+        resultado = resultado_queue.get()  # Esperar confirmación
+        proceso.join()
+        if resultado == "limpieza_ok":
+            print("✅ Estadísticas limpiadas exitosamente (proceso)")
+        else:
+            print("⚠️ Proceso finalizado pero sin confirmación de limpieza")
     except Exception as e:
         print(f"❌ Error al limpiar estadísticas: {e}")
 
