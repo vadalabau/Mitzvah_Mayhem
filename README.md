@@ -1,51 +1,72 @@
-🎮 Juego de Cartas - Sistema de Torneo (Arquitectura 3 Capas)
-Un sistema de torneo de cartas con arquitectura profesional, patrones de diseño y concurrencia real en Python.
-Arquitectura
-  Capa de Base de Datos (database/): Modelos de datos (@dataclass)
-  Capa de Acceso a Datos (data_access/): Repositorios y conexión a SQLite
-  Capa de Lógica de Negocio (business_logic/): Motor del juego y reglas
+Mitzvah_Mayhem/
+│
+├── business_logic/
+│ └── game_engine.py # Motor del juego, procesos e hilos
+│
+├── data_access/
+│ ├── database_connection.py # Singleton para conexión a BD
+│ └── repositories.py # Repositorios de acceso a datos
+│
+├── database/
+│ └── models.py # Modelos de datos (Carta, Jugador, Mazo, ResultadoPartida)
+│
+├── juego_cartas.db # Base de datos SQLite
+├── main_optimized.py # Aplicación principal (menú, flujo de usuario)
+└── test_procesos.py # (Opcional) Pruebas de procesos/hilos
 
-Concurrencia
-  1 Proceso: Árbitro (coordinador de la partida)
-  5 Hilos: Uno por cada jugador
-  Sincronización: threading.Event para turnos
-  Comunicación: Queue para paso de mensajes seguro
-  
-Características
-  5 jugadores, 3 rondas, ranking final
-  6 tipos de cartas (Fuego, Agua, Tierra, Aire, Rayo, Oscuridad)
-  Mazos balanceados y asignación automática
-  Estadísticas persistentes (victorias/derrotas)
-  Reinicio de mazos y limpieza de estadísticas
-  Menú interactivo en consola
-  
-Instalación y Uso
-  Requisitos
-  Python 3.8+
-  No requiere dependencias externas
+## Control de Concurrencia
 
-Estructura del Proyecto
-  Mitzvah Mayhem/
-  ├── business_logic/
-  │   └── game_engine.py
-  ├── data_access/
-  │   ├── database_connection.py
-  │   └── repositories.py
-  ├── database/
-  │   └── models.py
-  ├── juego_cartas.py
-  ├── main_optimized.py
-  ├── test_procesos.py
-  ├── juego_cartas.db
-  └── README.md
+- **Procesos**:
+  - `ProcesoArbitro`: Coordina la partida y crea 5 hilos de jugadores.
+  - `ProcesoReiniciarMazos`: Reinicia los mazos de los jugadores.
+  - `ProcesoLimpiarEstadisticas`: Limpia las estadísticas de los jugadores.
+- **Hilos**:
+  - Cada jugador es un hilo (`JugadorThread`) que juega su turno de forma sincronizada.
+- **Sincronización**:
+  - `threading.Lock`: Protege el acceso concurrente a los mazos.
+  - `threading.Event`: Controla el turno de cada jugador.
+  - `queue.Queue` y `multiprocessing.Queue`: Comunicación segura entre hilos y procesos.
 
-Ejemplo de Uso
-  Ejecuta el menú y elige "1. Jugar una partida"
-  El sistema simula el torneo y muestra el ranking
-  Consulta estadísticas con la opción 2
-  Reinicia mazos o limpia estadísticas según desees
-  
-Alumnos
-  Vadala Bautista
-  Geremias Romero
-  Matias Barqui
+---
+
+## Cómo ejecutar
+
+1. **Instala Python 3.8+** y asegúrate de tener `sqlite3` disponible.
+2. **Inicializa la base de datos** (opcional, si no existe):
+   ```bash
+   python juego_cartas.py
+   ```
+3. **Ejecuta la aplicación principal**:
+   ```bash
+   python main_optimized.py
+   ```
+4. **Sigue el menú interactivo** para jugar partidas, ver estadísticas, reiniciar mazos o limpiar estadísticas.
+
+---
+
+## Ejemplo de uso
+
+$ python main_optimized.py
+🎮 JUEGO DE CARTAS - VERSIÓN OPTIMIZADA
+Jugar una partida
+Ver estadísticas
+Reiniciar mazos
+Limpiar estadísticas
+Salir
+Selecciona una opción (1-5): 1
+🎯 Iniciando partida entre 5 jugadores...
+...
+🏆 GANADOR: Jugador 3
+💀 PERDEDOR: Jugador 2
+
+--
+
+## Créditos
+
+- Desarrollado por: Bautista Vadalá, Geremias Romero, Matias Barqui
+- Inspirado en prácticas de arquitectura limpia y concurrencia en Python de Alan Uzal (Te amo).
+
+## Agradecimientos
+
+- Alan Uzal por enseñar estos conceptos.
+- Matias Joel Sesto como beta tester.
