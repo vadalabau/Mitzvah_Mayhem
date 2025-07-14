@@ -59,7 +59,7 @@ Selecciona una opción (1-5): 1
 🏆 GANADOR: Jugador 3
 💀 PERDEDOR: Jugador 2
 
---
+---
 
 ## Créditos
 
